@@ -1,0 +1,49 @@
+/**:
+  ros__parameters:
+    # --- General ITS Parameters ---
+    sensor:
+      id: "ft_sensor"
+
+    fingertip:
+      id: "link_15_0_tip"
+
+      # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+      displacement: # [m]
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      orientation: # [rad]
+        roll: 0.0
+        pitch: 0.0
+        yaw: 0.0
+
+      # fingertip Surface
+      principalSemiAxis: # [mm]
+        a: 15.0
+        b: 15.0
+        c: 15.0
+      mesh:
+        filepath: ""
+        #filepath: "/workspaces/its-docker/ros2/src/its_ros2/assets/meshes/sphere_r15.stl"
+        #filepath: "/workspaces/its-docker/ros2/src/its_ros2/assets/meshes/digitac_skin.stl"
+        #filepath: "/workspaces/its-docker/ros2/src/its_ros2/assets/meshes/allegro_hand/ahand_ft_tip_convex_hull.stl"
+        type: "obj" # "obj" | "convex_hull (BUGGATO)"
+        scale: 1.0 #1000.0 # mesh should be in [mm]
+
+    # --- Soft ITS & Solver Parameters ---
+    soft_its:
+      rate: 10.0
+      wrench_msgs: true
+      algorithm:
+        verbose: true
+        force_threshold: 0.5 # [N]
+        method:
+          name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form"
+          params:
+            count_max: 100 #100
+            stop_threshold: 0.005
+            epsilon: 1e-3 #0.01
+
+    # --- Visualization Parameters ---
+    soft_viz:
+      theme: "Dark" # "Dark" | "Light"

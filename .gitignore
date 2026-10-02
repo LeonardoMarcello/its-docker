@@ -1,0 +1,11 @@
+# colcon build output (both at root and inside ros2/)
+build/
+install/
+log/
+
+# VS Code C++ index (~1.2 GB, over GitHub's limit) — keep settings.json etc.
+.vscode/browse.vc.db*
+*.vc.db
+
+__pycache__/
+.env

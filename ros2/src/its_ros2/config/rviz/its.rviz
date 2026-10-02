@@ -1,0 +1,24 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+
+Visualization Manager:
+  Global Options:
+    Fixed Frame: world
+  Displays:
+    - Class: rviz_default_plugins/RobotModel
+      Name: Fingertip Mesh
+      Enabled: true
+      Description Topic:
+        Value: /robot_description
+    # - Class: rviz_default_plugins/MarkerArray
+    #   Name: Contact Wrench
+    #   Enabled: true
+    #   Marker Topic: /its/wrench_markers   # match whatever topic your node publishes
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.15

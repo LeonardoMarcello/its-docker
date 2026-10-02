@@ -1,0 +1,68 @@
+/**:
+  ros__parameters:
+    # --- General ITS Parameters ---
+    sensor:
+      id: "sensor_1"
+      #id: "ft_sensor"
+
+    fingertip:
+      id: "link_3_0_tip"
+
+      # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+      displacement: # [mm]
+        x: 0.0
+        y: 0.0
+        z: -14.5
+        #z: 2.5
+      orientation: # [rad]
+        roll: 0.0
+        pitch: 3.14
+        yaw: 2.408
+
+      # fingertip Surface
+      principalSemiAxis: # [mm] - Still usefull for Closed Form initial guess
+        #a: 13.0
+        #b: 13.0
+        #c: -1.0
+
+        a: 14.0
+        b: 22.0
+        c: 14.0
+      mesh:
+        filepath: "/workspaces/its-docker/ros2/src/its_ros2/assets/meshes/allegro_hand/ahand_ft_tip_convex_hull.stl"
+        type: "obj"     # "obj" | "convex_hull (BUGGATO)"
+        scale: 1.0      #1000.0 # mesh should be in [mm]
+        proxy:          # Trasformation from mesh frame and ellipsoidal approximation center
+          displacement: # [mm]
+            x: 0.0
+            y: 0.0
+            z: -14.5
+          orientation:  # [rad]
+            roll: 0.0
+            pitch: 0.0
+            yaw: 0.0
+
+
+    # --- Soft ITS & Solver Parameters ---
+    soft_its:
+      rate: 10.0
+      wrench_msgs: true
+      algorithm:
+        verbose: true
+        force_threshold: 0.5 # [N]
+        method:
+          name: "Levenberg-Marquardt" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+          #name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+          #name: "Custom" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+          params:
+            count_max: 100 #100
+            stop_threshold: 0.001
+            epsilon: 1e-5 #0.01
+
+    # --- Visualization Parameters ---
+    soft_viz:
+      mesh:
+        filepath: "/workspaces/its-docker/ros2/src/its_ros2/assets/meshes/allegro_hand/ahand_ft_tip.stl"
+        scale: 1.0 #1000.0 # mesh should be in [mm]
+      theme: "Dark" # "Dark" | "Light"
+

@@ -1,0 +1,123 @@
+
+# ------------------------------
+# --- General ITS Parameters ---
+# ------------------------------
+compensate_fingertips: true     # Whether compensate for fingertip dynamic (config in bias_correction.yaml)
+
+# INDEX -------------------------------------
+sensor_4:
+  sensor:
+    #id: "sensor_4"
+    id: "sensor_4_compensated"
+
+  fingertip:
+    id: "link_7_0_tip"
+
+    # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+    displacement: # [m]
+      x: 8.0
+      y: 0.0
+      z: 0.0
+    orientation: # [rad]
+      roll: 0.0
+      pitch: 1.5708
+      yaw: 1.5708
+
+    # fingertip Surface
+    principalSemiAxis: # [mm]
+      a: 15.0
+      b: 24.5
+      c: 15.0
+
+# MIDDLE -------------------------------------
+sensor_2:
+  sensor:
+    id: "sensor_2"
+
+  fingertip:
+    id: "link_3_0_tip"
+
+    # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+    displacement: # [m]
+      x: 8.0
+      y: 0.0
+      z: 0.0
+    orientation: # [rad]
+      roll: 0.0
+      pitch: 1.5708
+      yaw: 1.5708
+
+    # fingertip Surface
+    principalSemiAxis: # [mm]
+      a: 15.0
+      b: 24.5
+      c: 15.0
+
+# RING -------------------------------------
+sensor_3:
+  sensor:
+    id: "sensor_3"
+
+  fingertip:
+    id: "link_11_0_tip"
+
+    # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+    displacement: # [m]
+      x: 8.0
+      y: 0.0
+      z: 0.0
+    orientation: # [rad]
+      roll: 0.0
+      pitch: 1.5708
+      yaw: 1.5708
+
+    # fingertip Surface
+    principalSemiAxis: # [mm]
+      a: 15.0
+      b: 24.5
+      c: 15.0
+
+# THUMB -------------------------------------
+sensor_1:
+  sensor:
+    id: "sensor_1"
+
+  fingertip:
+    id: "link_15_0_tip"
+
+    # Relative Tranformation from F/T Frame {S}, and Object Frame {B}
+    displacement: # [m]
+      x: 8.0
+      y: 0.0
+      z: 0.0
+    orientation: # [rad]
+      roll: 0.0
+      pitch: 1.5708
+      yaw: 1.5708
+
+    # fingertip Surface
+    principalSemiAxis: # [mm]
+      a: 15.0
+      b: 24.5
+      c: 15.0
+
+
+# ------------------------------------
+# --- Soft ITS & Solver Parameters ---
+# ------------------------------------
+soft_its:
+  rate: 500.0
+  wrench_msgs: true
+  algorithm:
+    verbose: false
+    force_threshold: 0.15 # [N]
+    method:
+      name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+
+
+
+# ------------------------------------
+# --- Visualization Parameters ---
+# ------------------------------------
+#soft_viz:
+#  theme: "Dark" # "Dark" | "Light"

@@ -1,0 +1,73 @@
+/**:
+  ros__parameters:
+      sensors:    # Measurements IDs
+        id:
+          - "sensor_1"
+          - "sensor_2"
+          - "sensor_3"
+          - "sensor_4"
+
+      fingertips:    # Frames IDs
+        id:
+          - "link_15_0_tip"
+          - "link_7_0_tip"
+          - "link_11_0_tip"
+          - "link_3_0_tip"
+
+      rotation: # Additional rotation from fingertip id and Sensor frame [rad]
+          roll: 1.57
+          pitch: 0.0
+          yaw: 1.57
+
+      input_topic_name: "netft_data"
+      world_frame: "palm_link"
+
+      mass: 5.7226210e-03   # Fingertip mass [Kg]
+      com:                  # Fingertip Center of mass [mm]
+        - -1.4720817e-02
+        - 1.0711983e+01
+        - 0.0
+      Ib :                  # Fingertip inertial tensor [Kg*mm^2]
+        - 1.4971730e+00     # Ixx
+        - 4.0060127e-02     # Ixy
+        - 0.0               # Ixz
+        - 9.1334613e-01     # Iyy
+        - 0.0               # Iyz
+        - 1.5530133e+00     # Izz
+# FINGERTIP MASS PROPERTIES
+# ---------------------------
+#
+# VOLUME =  5.5025202e+03  MM^3
+# AREA SUPERFICIE =  5.7319060e+03  MM^2
+# DENSITÀ =  1.0400000e-06 CHILOGRAMMO / MM^3
+# MASSA =  5.7226210e-03 CHILOGRAMMO
+# BARICENTRO rispetto a sistema di coordinate _ELLIPSOID_TIP:
+# X   Y   Z    -1.4720817e-02  1.0711983e+01  0.0000000e+00  MM
+#
+# INERZIA rispetto a sistema di coordinate _ELLIPSOID_TIP:  (CHILOGRAMMO * MM^2)
+#
+# TENSORE DI INERZIA:
+# Ixx Ixy Ixz  1.4971730e+00 -4.0060127e-02  0.0000000e+00
+# Iyx Iyy Iyz -4.0060127e-02  9.1334613e-01  0.0000000e+00
+# Izx Izy Izz  0.0000000e+00  0.0000000e+00  1.5530133e+00
+#
+# INERZIA al BARICENTRO rispetto a sistema di coordinate _ELLIPSOID_TIP:  (CHILOGRAMMO * MM^2)
+#
+# TENSORE DI INERZIA:
+# Ixx Ixy Ixz  8.4052179e-01 -4.0962522e-02  0.0000000e+00
+# Iyx Iyy Iyz -4.0962522e-02  9.1334489e-01  0.0000000e+00
+# Izx Izy Izz  0.0000000e+00  0.0000000e+00  8.9636089e-01
+#
+# MOMENTI PRINCIPALI DI INERZIA:  (CHILOGRAMMO * MM^2)
+# I1  I2  I3   8.2212705e-01  8.9636089e-01  9.3173963e-01
+#
+# MATRICE DI ROTAZIONE da orientamento _ELLIPSOID_TIP agli ASSI PRINCIPALI:
+#        0.91224        0.00009        0.40965
+#        0.40965        0.00001       -0.91224
+#       -0.00008        1.00000       -0.00003
+#
+# ANGOLI DI ROTAZIONE da orientamento _ELLIPSOID_TIP agli ASSI PRINCIPALI (gradi):
+# angoli attorno a x  y  z  90.002         24.183          0.000
+#
+# RAGGI DI GIRAZIONE rispetto a ASSI PRINCIPALI:
+# R1  R2  R3 1.1985937e+01  1.2515378e+01  1.2759974e+01  MM

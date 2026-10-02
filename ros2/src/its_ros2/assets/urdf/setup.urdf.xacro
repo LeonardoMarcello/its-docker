@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="setup">
+  
+  <!-- Parameters: translation in [m], rotation in [rad] -->
+  <!-- Camera to world - After Franka calibration - -->
+  <!-- -0.000851005   -0.0499745    -0.998735     0.413369
+        1.0005    -0.020364 -9.29542e-05   -0.0259815
+        -0.020293     -0.99849    0.0499331     0.153574
+        5.70435e-09 -6.51926e-09  6.70552e-08            1 -->
+
+  <!-- <xacro:property name="camera_x" value="0.413369"/>
+  <xacro:property name="camera_y" value="-0.0259815"/>
+  <xacro:property name="camera_z" value="0.153574"/>  
+  <xacro:property name="camera_roll" value="0.0073142"/>
+  <xacro:property name="camera_pitch" value="-1.5203324"/>
+  <xacro:property name="camera_yaw" value="1.5986773"/> -->
+  <!-- Apriltag to camera - After apriltag detection - -->
+  <!-- <xacro:property name="apriltag_x" value="0.0"/>
+  <xacro:property name="apriltag_y" value=".1"/>
+  <xacro:property name="apriltag_z" value="0.0"/>  
+  <xacro:property name="apriltag_roll" value="0.0"/>
+  <xacro:property name="apriltag_pitch" value="0.0"/>
+  <xacro:property name="apriltag_yaw" value="0.0"/> -->
+  <!-- Apriltag to Fingertip - From fingertip model -
+      translation [m]: -0.015, .0, 0.014
+      rotation [rad]: 0, -3.14/2, -3.14/2 
+  -->
+  <!-- Safe area size:
+        altezza superficie (=h_max): 0.0465 m
+        sicurezza (h = h_max - 4 mm): 0.0425 m 
+
+   0.05 o 0.045: 0.0425-->
+  <xacro:property name="sw_height" value="0.0425"/>
+  <xacro:property name="sw_x" value="1"/>
+  <xacro:property name="sw_y" value=".5"/>
+  <xacro:property name="sw_z" value="0.0001"/>
+
+  <!-- Frames -->
+  <!-- <link name="fingertip_link"/> -->
+  <!-- <link name="apriltag_link"/> -->
+  <!-- <link name="camera_link"/> -->
+  <!-- <link name="camera_color_optical_frame"/> -->
+  <!-- Frames transformation -->
+  <!-- <joint name="camera_to_world" type="fixed">
+      <parent link="world"/>
+      <child link="camera_link"/>
+      <origin  xyz="0 0 0" rpy="0 0 0"/> 
+  </joint> -->
+<!-- 
+  <joint name="apriltag_to_camera" type="fixed">
+      <parent link="camera_color_optical_frame"/>
+      <child link="apriltag_link"/>
+      <origin  xyz="${apriltag_x} ${apriltag_y} ${apriltag_z}" rpy="${apriltag_roll} ${apriltag_pitch} ${apriltag_yaw}"/> 
+  </joint> -->
+
+  <!-- <joint name="fingertip_to_apriltag" type="fixed">
+      <parent link="apriltag_link"/>
+      <child link="fingertip_link"/>
+      <origin  xyz="0 0.015 -0.014" rpy="0.0 -${3.14/2} -${3.14/2}"/> 
+  </joint> -->
+
+    <!-- Safe wall -->
+    <link name="safe_wall">
+        <visual>
+            <origin xyz="${sw_x/3} 0 ${sw_height}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${sw_x} ${sw_y} ${sw_z}"/>
+            </geometry>
+            <color rgba="0.5 0.0 0.0 0.5"/>
+        </visual>
+        <collision>
+            <origin xyz="${sw_x/3} 0 ${sw_height}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${sw_x} ${sw_y} ${sw_z}"/>
+            </geometry>
+        </collision>
+    </link>  
+    <joint name="safe_wall_to_world" type="fixed">
+        <parent link="world"/>
+        <child link="safe_wall"/>
+        <origin  xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    </joint>
+
+</robot>

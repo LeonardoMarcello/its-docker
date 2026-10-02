@@ -1,0 +1,30 @@
+{
+    "name": "ROS ITS Development Container",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": ".."
+    },
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+    ],
+    //"workspaceFolder": "/home/its/its-docker",
+    //"workspaceMount": "source=${localWorkspaceFolder},target=/home/its/its-docker,type=bind",
+    "postCreateCommand": "./postCreateCommand.sh",
+    "remoteUser": "its",
+    "runArgs": [
+        "--net=host",
+        "-v",
+        "/tmp/.X11-unix:/tmp/.X11-unix",
+        "--device=/dev/dri:/dev/dri"
+    ],
+    "containerEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "ROS_DOMAIN_ID": "${localEnv:ROS_DOMAIN_ID:0}",
+        "RMW_IMPLEMENTATION": "${localEnv:RMW_IMPLEMENTATION:rmw_cyclonedds_cpp}"
+    }
+}
