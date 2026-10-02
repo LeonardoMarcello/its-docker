@@ -156,6 +156,8 @@ int IntrinsicTactileSensing::solveContactSensingProblem(
             return solveContactSensingProblemGN(X0, f, m, forceThreshold, count_max, stop_th, epsilon, verbose);
         case ContactSensingProblemMethod::Closed_Form:
             return solveContactSensingProblemCF(f, m, forceThreshold);
+        case ContactSensingProblemMethod::Wrench_Method:
+            return solveContactSensingProblemWM(f, m, forceThreshold);
         case ContactSensingProblemMethod::Custom:
             return solveContactSensingProblemCUSTOM(f, m, forceThreshold);
         default:
@@ -506,7 +508,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(
         const double K = (-(pdott / std::abs(pdott)) / (std::sqrt(2.0) * R))
                     * std::sqrt(sigma + std::sqrt(sigma*sigma + 4.0*R*R*pdott*pdott));
         if (K == 0.0)
-            return solveContactSensingProblemCF(f_in, m_in, forceThreshold);  // wrench-axis fallback
+            return solveContactSensingProblemWM(f_in, m_in, forceThreshold);  // wrench-axis fallback
         Eigen::Vector3d PoC = 1.0 / (K*(K*K + p.squaredNorm())) *
                             (K*K* t + K * p.cross(t) + pdott * p);
 
@@ -524,7 +526,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(
 
         const double K = - pdott / std::sqrt(R*R*pnorm_sqnorm - ttan_sqnorm);
         if (K == 0.0)
-            return solveContactSensingProblemCF(f_in, m_in, forceThreshold);  // wrench-axis fallback
+            return solveContactSensingProblemWM(f_in, m_in, forceThreshold);  // wrench-axis fallback
         Eigen::Vector3d PoC = 1.0 / (K*pnorm_sqnorm) *
                             (K*K* ttan + K * pnorm.cross(t) + pdott * p);
 
@@ -579,7 +581,7 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(
         const double detG = K * (K*K*D*D + Ap.squaredNorm());
 
         if (K == 0.0)
-            return solveContactSensingProblemCF(f_in, m_in, forceThreshold);  // wrench-axis fallback
+            return solveContactSensingProblemWM(f_in, m_in, forceThreshold);  // wrench-axis fallback
 
         Eigen::Vector3d PoC = (1.0 / detG) *
                             (K*K*D*D * A.inverse() * A.inverse() * t
@@ -595,11 +597,122 @@ int IntrinsicTactileSensing::solveContactSensingProblemCF(
 }
 
 // ============================================================================
-//  Wrench Method  (to do)
+//  Wrench Method  (Bicchi, Salisbury & Brock, IJRR 1993)
+//
+//  The measured wrench (f, m) defines the wrench (central) axis
+//      c(λ) = r0 + λ·u,   r0 = (f × m) / |f|²,   u = f / |f|
+//  For a point contact (m = c × f) the PoC lies on this axis, hence it is the
+//  intersection of the axis with the fingertip surface S(c) = 0. Of the two
+//  intersections the one where the force pushes into the surface
+//  (f·∇S < 0, i.e. the entry point along u) is selected.
+//  The torsional moment is then recovered from the residual torque:
+//      K = (m - c × f)·∇S / |∇S|²
+//  If the axis misses the surface, the axis point closest to the fingertip is
+//  projected onto S.
 // ============================================================================
 int IntrinsicTactileSensing::solveContactSensingProblemWM(
-        Eigen::Vector3d, Eigen::Vector3d, double) {
-    return -1;
+        Eigen::Vector3d f_in, Eigen::Vector3d m_in, double forceThreshold) {
+
+    this->f = f_in; this->m = m_in;
+    if (f_in.norm() < forceThreshold || f_in.norm() < 1e-12) return -1;
+    // Translate raw measurements in Fingertip frame {B}
+    Eigen::Vector3d p, t;
+    transformToFingertipFrame(f_in, m_in, fingertip.orientation, fingertip.displacement, p, t);
+    this->f = p; this->m = t;
+
+    // Wrench axis
+    const Eigen::Vector3d r0 = p.cross(t) / p.squaredNorm();
+    const Eigen::Vector3d u  = p.normalized();
+
+    const SurfaceType type = fingertip.model.surfaceType;
+    const double a = fingertip.model.principalAxisCoeff[0];
+    const double b = fingertip.model.principalAxisCoeff[1];
+    const double c = fingertip.model.principalAxisCoeff[2];
+
+    // Gradient ∇S(c) consistent with the residuals of each surface type
+    auto gradS = [&](const Eigen::Vector3d& q) -> Eigen::Vector3d {
+        switch (type) {
+            case SurfaceType::Plane:    return {0.0, 0.0, 1.0};
+            case SurfaceType::Cylinder: return {2.0*q(0)/(a*a), 2.0*q(1)/(a*a), 0.0};
+            default:                    return fingertip.model.getNormal(q(0), q(1), q(2));
+        }
+    };
+
+    Eigen::Vector3d PoC;
+    bool hit = false;
+
+    if (type == SurfaceType::Mesh || type == SurfaceType::ConvexHull) {
+        // ---- mesh path: line-triangle intersection (Möller–Trumbore) -------
+        double lambda_best = std::numeric_limits<double>::max();
+        for (const auto& tri : fingertip.model.mesh.triangles) {
+            if (tri.normal().dot(u) >= 0.0) continue;       // keep entry faces only
+            const Eigen::Vector3d e1 = tri.v1 - tri.v0;
+            const Eigen::Vector3d e2 = tri.v2 - tri.v0;
+            const Eigen::Vector3d h  = u.cross(e2);
+            const double det = e1.dot(h);
+            if (std::abs(det) < 1e-12) continue;
+            const Eigen::Vector3d s = r0 - tri.v0;
+            const double bu = s.dot(h) / det;
+            if (bu < 0.0 || bu > 1.0) continue;
+            const Eigen::Vector3d q = s.cross(e1);
+            const double bv = u.dot(q) / det;
+            if (bv < 0.0 || bu + bv > 1.0) continue;
+            const double lambda = e2.dot(q) / det;
+            if (lambda < lambda_best) { lambda_best = lambda; hit = true; }
+        }
+        if (hit) {
+            PoC = r0 + lambda_best * u;
+        } else {
+            // axis point closest to the mesh centroid, snapped on the surface
+            Eigen::Vector3d centroid = Eigen::Vector3d::Zero();
+            for (const auto& tri : fingertip.model.mesh.triangles) centroid += tri.centroid();
+            centroid /= static_cast<double>(fingertip.model.mesh.triangles.size());
+            PoC = fingertip.model.projectOnSurface(r0 + (centroid - r0).dot(u) * u);
+        }
+
+    } else if (type == SurfaceType::Plane) {
+        // ---- plane z = a ---------------------------------------------------
+        if (std::abs(u(2)) < 1e-12) return -1;              // axis parallel to plane
+        PoC = r0 + ((a - r0(2)) / u(2)) * u;
+        hit = true;
+
+    } else {
+        // ---- quadric path: (r0+λu)ᵀ A (r0+λu) = 1 --------------------------
+        //  Sphere/Ellipsoid: A = diag(1/a², 1/b², 1/c²)
+        //  Cylinder:         A = diag(1/a², 1/a², 0)
+        const Eigen::Vector3d Ad = (type == SurfaceType::Cylinder)
+            ? Eigen::Vector3d(1.0/(a*a), 1.0/(a*a), 0.0)
+            : Eigen::Vector3d(1.0/(a*a), 1.0/(b*b), 1.0/(c*c));
+
+        const double qa = u.cwiseProduct(Ad).dot(u);
+        const double qb = u.cwiseProduct(Ad).dot(r0);
+        const double qc = r0.cwiseProduct(Ad).dot(r0) - 1.0;
+        if (qa < 1e-20) return -1;                           // axis parallel to cylinder
+
+        const double disc = qb*qb - qa*qc;
+        if (disc >= 0.0) {
+            // smaller root = entry point along u, where f·∇S < 0
+            PoC = r0 + ((-qb - std::sqrt(disc)) / qa) * u;
+            hit = true;
+        } else {
+            // axis point closest to the surface (in the A-metric), projected on S
+            PoC = r0 - (qb / qa) * u;
+            if (type == SurfaceType::Cylinder) {
+                const double rho = std::hypot(PoC(0), PoC(1));
+                if (rho > 1e-12) { PoC(0) *= a / rho; PoC(1) *= a / rho; }
+            } else {
+                PoC = fingertip.model.projectOnSurface(PoC);
+            }
+        }
+    }
+
+    // Torsional moment from residual torque along the normal
+    const Eigen::Vector3d gS = gradS(PoC);
+    const double gS_sq = gS.squaredNorm();
+    X.c = PoC;
+    X.K = (gS_sq > 1e-20) ? (t - PoC.cross(p)).dot(gS) / gS_sq : 0.0;
+
+    return hit ? 1 : 0;
 }
 
 // ============================================================================

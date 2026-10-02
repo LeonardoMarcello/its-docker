@@ -13,7 +13,10 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Point2D.msg"
+  "msg/ContactSensingProblemSolution.msg"
+  "msg/ContactSensingProblemSolutionStamped.msg"
   "msg/SoftContactSensingProblemSolution.msg"
+  "msg/SoftContactSensingProblemSolutionStamped.msg"
   "msg/TacTipDensity.msg"
   "msg/TacTipMarkers.msg"
   DEPENDENCIES

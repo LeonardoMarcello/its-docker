@@ -112,7 +112,7 @@ soft_its:
     verbose: false
     force_threshold: 0.15 # [N]
     method:
-      name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+      name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method" | "Custom"
 
 
 

@@ -1,0 +1,116 @@
+# syntax=docker/dockerfile:1
+# ==============================================================================
+#  ITS production image
+#
+#  Two stages:
+#    1. builder  – compiles coal + the ROS 2 workspace and computes the exact
+#                  list of apt packages the binaries need at runtime (via ldd).
+#    2. runtime  – ros-core + only those packages + stripped binaries.
+#
+#  Build:   docker build -f Dockerfile.prod -t its:prod .
+#  Run:     docker run --rm --network host its:prod
+# ==============================================================================
+ARG ROS_DISTRO=humble
+
+# ==============================================================================
+#  STAGE 1: BUILDER
+# ==============================================================================
+FROM ros:${ROS_DISTRO}-ros-core AS builder
+
+ARG COAL_REF=v3.0.4
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git ca-certificates \
+    python3-colcon-common-extensions \
+    libeigen3-dev libboost-serialization-dev libboost-filesystem-dev \
+    libassimp-dev liblapack-dev libblas-dev \
+    libgl-dev freeglut3-dev \
+    ros-${ROS_DISTRO}-tf2-ros ros-${ROS_DISTRO}-geometry-msgs \
+    ros-${ROS_DISTRO}-sensor-msgs ros-${ROS_DISTRO}-std-msgs \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- coal: shallow pinned clone, C++ only (no python, octomap, tests, docs) --
+RUN git clone --depth 1 --branch ${COAL_REF} --recursive --shallow-submodules \
+    https://github.com/coal-library/coal.git /tmp/coal \
+    && cmake -S /tmp/coal -B /tmp/coal/build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_PYTHON_INTERFACE=OFF \
+    -DBUILD_TESTING=OFF \
+    -DINSTALL_DOCUMENTATION=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --build /tmp/coal/build -j"$(nproc)" \
+    && cmake --install /tmp/coal/build \
+    && rm -rf /tmp/coal \
+    && ldconfig
+
+# ---- workspace -------------------------------------------------------------
+WORKDIR /opt/its_ws
+COPY ros2/src/ src/
+
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
+    && colcon build \
+    --merge-install \
+    --event-handlers console_direct- \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+
+# ---- trim install tree + compute runtime apt dependencies ------------------
+#  - drop the test node, headers, cmake cfg
+#  - strip all ELF files
+#  - map every shared library loaded by the binaries (ldd) to its apt package
+#  - the RMW (CycloneDDS) and Mesa GLX/DRI are dlopen()ed, so ldd cannot see
+#    them: add them explicitly
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && . install/setup.sh && set -eu; \
+    rm -f install/lib/its_ros2/check_package_node; \
+    rm -rf install/include install/share/*/cmake; \
+    mkdir -p /opt/coal/lib && cp -a /usr/local/lib/libcoal*.so* /opt/coal/lib/; \
+    find install /opt/coal -type f \( -name '*.so*' -o -perm -u+x \) \
+    -exec strip --strip-unneeded {} \; 2>/dev/null || true; \
+    find install /opt/coal -type f \( -name '*.so*' -o -perm -u+x \) -exec ldd {} \; 2>/dev/null \
+    | awk '/=> \//{print $3}' | sort -u \
+    | while read -r lib; do \
+    dpkg -S "$lib" 2>/dev/null \
+    || dpkg -S "$(realpath "$lib")" 2>/dev/null \
+    || dpkg -S "$(realpath "$lib" | sed 's|^/usr||')" 2>/dev/null \
+    || true; \
+    done \
+    | cut -d: -f1 | sort -u > /opt/runtime-packages.txt; \
+    echo "ros-${ROS_DISTRO}-rmw-cyclonedds-cpp" >> /opt/runtime-packages.txt; \
+    printf 'libglx-mesa0\nlibgl1-mesa-dri\n' >> /opt/runtime-packages.txt; \
+    echo "Runtime packages:"; cat /opt/runtime-packages.txt
+
+# ==============================================================================
+#  STAGE 2: RUNTIME
+# ==============================================================================
+FROM ros:${ROS_DISTRO}-ros-core AS runtime
+
+ARG USER=its
+ARG UID=1000
+ARG GID=1000
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY --from=builder /opt/runtime-packages.txt /tmp/runtime-packages.txt
+RUN apt-get update \
+    && xargs -a /tmp/runtime-packages.txt apt-get install -y --no-install-recommends \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* \
+    /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+
+COPY --from=builder /opt/coal/lib/ /usr/local/lib/
+RUN ldconfig
+
+COPY --from=builder /opt/its_ws/install /opt/its_ws/install
+COPY docker/entrypoint.sh /entrypoint.sh
+
+# non-root user, no sudo in production
+RUN groupadd -g ${GID} ${USER} || true \
+    && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USER} || true \
+    && chmod 0755 /entrypoint.sh
+
+USER ${USER}
+ENV HOME=/home/${USER}
+WORKDIR ${HOME}
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["ros2", "launch", "its_ros2", "its_bringup.launch.py"]

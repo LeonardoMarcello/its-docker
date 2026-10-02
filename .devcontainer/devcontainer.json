@@ -2,6 +2,9 @@
     "name": "ROS ITS Development Container",
     "build": {
         "dockerfile": "../Dockerfile",
+        "args": {
+            "USERNAME": "its_dev"
+        },
         "context": ".."
     },
     "settings": {
@@ -15,8 +18,11 @@
     //"workspaceFolder": "/home/its/its-docker",
     //"workspaceMount": "source=${localWorkspaceFolder},target=/home/its/its-docker,type=bind",
     "postCreateCommand": "./postCreateCommand.sh",
-    "remoteUser": "its",
+    "remoteUser": "its_dev",
+    "containerUser": "its_dev",
     "runArgs": [
+        "--name",
+        "its_dev",
         "--net=host",
         "-v",
         "/tmp/.X11-unix:/tmp/.X11-unix",

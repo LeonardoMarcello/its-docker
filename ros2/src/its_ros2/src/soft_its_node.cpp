@@ -5,7 +5,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "its_msgs/msg/soft_contact_sensing_problem_solution.hpp"
+#include "its_msgs/msg/soft_contact_sensing_problem_solution_stamped.hpp"
 #include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -117,11 +117,11 @@ public:
             sensor_id + "/netft_data", 100,
             [this](const geometry_msgs::msg::WrenchStamped::SharedPtr msg) { ftCallback(msg); });
 
-        ig_sub_ = create_subscription<its_msgs::msg::SoftContactSensingProblemSolution>(
+        ig_sub_ = create_subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>(
             "soft_csp/initial_guess", 100,
-            [this](const its_msgs::msg::SoftContactSensingProblemSolution::SharedPtr msg) { igCallback(msg); });
+            [this](const its_msgs::msg::SoftContactSensingProblemSolutionStamped::SharedPtr msg) { igCallback(msg); });
 
-        solution_pub_ = create_publisher<its_msgs::msg::SoftContactSensingProblemSolution>(
+        solution_pub_ = create_publisher<its_msgs::msg::SoftContactSensingProblemSolutionStamped>(
             "soft_csp/solution", 100);
 
         const auto period = std::chrono::duration<double>(1.0 / rate_hz_);
@@ -139,13 +139,13 @@ private:
         new_measure_ = true;
     }
 
-    void igCallback(const its_msgs::msg::SoftContactSensingProblemSolution::SharedPtr msg) {
+    void igCallback(const its_msgs::msg::SoftContactSensingProblemSolutionStamped::SharedPtr msg) {
         // Method A: initial guess from TacTip
-        X0_.c  = {msg->poc.x, msg->poc.y, msg->poc.z};
+        X0_.c  = {msg->csp.c.x, msg->csp.c.y, msg->csp.c.z};
         X0_.Dd = msg->d;
         Eigen::Vector3d n = SITS_.fingertip.model.getNormal(
             X0_.c(0), X0_.c(1), X0_.c(2), X0_.Dd);
-        X0_.K = msg->t / n.norm();
+        X0_.K = msg->csp.t / n.norm();
     }
 
     void timerCallback() {
@@ -159,7 +159,7 @@ private:
 
         const double elapsed_ms = (t1 - t0).nanoseconds() / 1e6;
 
-        its_msgs::msg::SoftContactSensingProblemSolution sol_msg;
+        its_msgs::msg::SoftContactSensingProblemSolutionStamped sol_msg;
         sol_msg.header.frame_id = SITS_.fingertip.id;
         sol_msg.header.stamp    = t1;
 
@@ -186,13 +186,13 @@ private:
                 RCLCPP_WARN(get_logger(), "Did not converge in %i steps (%.3f ms)", count_max_, elapsed_ms);
             RCLCPP_INFO(get_logger(), "%s", std::string(40, '-').c_str());
 
-            sol_msg.poc.x = sol.PoC(0); sol_msg.poc.y = sol.PoC(1); sol_msg.poc.z = sol.PoC(2);
-            sol_msg.n.x   = n(0);       sol_msg.n.y   = n(1);       sol_msg.n.z   = n(2);
-            sol_msg.fn    = sol.fn;
-            sol_msg.ft.x  = sol.ft(0);  sol_msg.ft.y  = sol.ft(1);  sol_msg.ft.z  = sol.ft(2);
-            sol_msg.t     = sol.t;
+            sol_msg.csp.c.x = sol.PoC(0); sol_msg.csp.c.y = sol.PoC(1); sol_msg.csp.c.z = sol.PoC(2);
+            sol_msg.csp.n.x = n(0);       sol_msg.csp.n.y = n(1);       sol_msg.csp.n.z = n(2);
+            sol_msg.csp.fn  = sol.fn;
+            sol_msg.csp.ft.x = sol.ft(0); sol_msg.csp.ft.y = sol.ft(1); sol_msg.csp.ft.z = sol.ft(2);
+            sol_msg.csp.t   = sol.t;
             sol_msg.d     = sol.Dd;
-            sol_msg.convergence_time = elapsed_ms;
+            sol_msg.csp.convergence_time = elapsed_ms;
 
             geometry_msgs::msg::TransformStamped tf;
             tf.header.stamp    = t1;
@@ -228,8 +228,8 @@ private:
     double      rate_hz_   {0.5};
 
     rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr                        ft_sub_;
-    rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolution>::SharedPtr         ig_sub_;
-    rclcpp::Publisher<its_msgs::msg::SoftContactSensingProblemSolution>::SharedPtr            solution_pub_;
+    rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>::SharedPtr         ig_sub_;
+    rclcpp::Publisher<its_msgs::msg::SoftContactSensingProblemSolutionStamped>::SharedPtr            solution_pub_;
     rclcpp::TimerBase::SharedPtr                                                              timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster>                                            tf_broadcaster_;
 };

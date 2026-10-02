@@ -38,7 +38,7 @@
         verbose: true
         force_threshold: 0.5 # [N]
         method:
-          name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form"
+          name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method"
           params:
             count_max: 100 #100
             stop_threshold: 0.005

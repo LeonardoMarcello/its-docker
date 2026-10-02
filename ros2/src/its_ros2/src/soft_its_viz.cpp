@@ -7,7 +7,7 @@
 #include <cctype>
 
 #include "rclcpp/rclcpp.hpp"
-#include "its_msgs/msg/soft_contact_sensing_problem_solution.hpp"
+#include "its_msgs/msg/soft_contact_sensing_problem_solution_stamped.hpp"
 
 #include "its_ros2/Fingertip.hpp"   // adjust to your include path
 
@@ -17,7 +17,7 @@ using namespace fingertip;
 //  Globals
 // ============================================================================
 rclcpp::Node::SharedPtr g_node = nullptr;
-rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolution>::SharedPtr g_sub = nullptr;
+rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>::SharedPtr g_sub = nullptr;
 
 static Surface g_surface;
 static bool    g_use_mesh = false;
@@ -564,16 +564,16 @@ void mouseMotion(int x, int y) {
 //  ROS 2 callback
 // ============================================================================
 void Callback_contactstate(
-    const its_msgs::msg::SoftContactSensingProblemSolution::SharedPtr msg)
+    const its_msgs::msg::SoftContactSensingProblemSolutionStamped::SharedPtr msg)
 {
-    x_pos = (float)(msg->poc.x / 10.0);
-    y_pos = (float)(msg->poc.y / 10.0);
-    z_pos = (float)(msg->poc.z / 10.0);
+    x_pos = (float)(msg->csp.c.x / 10.0);
+    y_pos = (float)(msg->csp.c.y / 10.0);
+    z_pos = (float)(msg->csp.c.z / 10.0);
     d_def = (float)(msg->d    / 10.0);
-    double Fn = msg->fn;
-    fn[0]=(float)(msg->n.x*Fn); fn[1]=(float)(msg->n.y*Fn); fn[2]=(float)(msg->n.z*Fn);
-    ft[0]=(float)msg->ft.x; ft[1]=(float)msg->ft.y; ft[2]=(float)msg->ft.z;
-    lt   =(float)msg->t;
+    double Fn = msg->csp.fn;
+    fn[0]=(float)(msg->csp.n.x*Fn); fn[1]=(float)(msg->csp.n.y*Fn); fn[2]=(float)(msg->csp.n.z*Fn);
+    ft[0]=(float)msg->csp.ft.x; ft[1]=(float)msg->csp.ft.y; ft[2]=(float)msg->csp.ft.z;
+    lt   =(float)msg->csp.t;
     glutPostRedisplay();
 }
 
@@ -627,7 +627,7 @@ int main(int argc, char* argv[]) {
             RCLCPP_WARN(g_node->get_logger(), "Mesh load failed, falling back to ellipsoid.");
     }
 
-    g_sub = g_node->create_subscription<its_msgs::msg::SoftContactSensingProblemSolution>(
+    g_sub = g_node->create_subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>(
         "soft_csp_" + finger_id + "/solution", 100, Callback_contactstate);
 
     std::string title = "SoftCSPViz - " + finger_id;

@@ -1,6 +1,7 @@
 # All values are referenced in the fingertip core center frame {B}
 
-its_msgs/ContactSensingProblemSolution csp             # Point of Contact [mm]
+std_msgs/Header header              # stamp
+its_msgs/ContactSensingProblemSolution csp                    # Point of Contact [mm]
 # Definition of ContactSensingProblemSolution.msg:
 #   geometry_msgs/Point c               # Contact Centroid [mm]
 #   geometry_msgs/Vector3 n             # normal direction to fingertip surfaces in PoC

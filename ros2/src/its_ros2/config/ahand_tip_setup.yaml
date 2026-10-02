@@ -33,7 +33,7 @@
         verbose: false
         force_threshold: 0.5 # [N]
         method:
-          name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+          name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method" | "Custom"
 
     # --- Visualization Parameters ---
     soft_viz:

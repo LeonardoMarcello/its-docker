@@ -51,9 +51,9 @@
         verbose: true
         force_threshold: 0.5 # [N]
         method:
-          name: "Levenberg-Marquardt" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
-          #name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
-          #name: "Custom" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Custom"
+          name: "Levenberg-Marquardt" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method" | "Custom"
+          #name: "Closed-Form" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method" | "Custom"
+          #name: "Custom" # "Levenberg-Marquardt" | "Gauss-Newton" | "Closed-Form" | "Wrench-Method" | "Custom"
           params:
             count_max: 100 #100
             stop_threshold: 0.001

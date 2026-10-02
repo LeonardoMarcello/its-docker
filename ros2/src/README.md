@@ -16,7 +16,20 @@
 ### This package ( _its_msgs_ ) contains the ROS messages for the Intrinsic Tactile Sensing (ITS) algorithm.
 
 - **its_msgs/Point2D**: A message to represent the coordinates of a point in a camera plane.
-- **its_msgs/SoftContactSensingProblemSolution**: A message that contains the solution of the soft contact sensing problem. (i.e., the contact points, the contact forces and torques, the contact normals and the contact depths).
+- **its_msgs/ContactSensingProblemSolution**: The solution of the (rigid) contact sensing problem, referenced in the fingertip frame {B}:
+  - `c` (`geometry_msgs/Point`): contact centroid [mm]
+  - `n` (`geometry_msgs/Vector3`): surface normal at the contact point
+  - `fn` (`float64`): normal force [N]
+  - `ft` (`geometry_msgs/Vector3`): tangential force [N]
+  - `t` (`float64`): local torque around the normal [N mm]
+  - `convergence_time` (`float64`): solver time [ms]
+- **its_msgs/ContactSensingProblemSolutionStamped**: Same fields as `ContactSensingProblemSolution`, plus a `std_msgs/Header header`.
+- **its_msgs/SoftContactSensingProblemSolution**: The solution of the soft contact sensing problem:
+  - `csp` (`its_msgs/ContactSensingProblemSolution`): contact solution
+  - `d` (`float64`): deformation [mm] of the fingertip surface along the normal
+- **its_msgs/SoftContactSensingProblemSolutionStamped**: Same as `SoftContactSensingProblemSolution`, plus a `std_msgs/Header header` (frame = fingertip id, stamp = solution time).
+  This is the message published by `its_node` and `soft_its_node` on `soft_csp_<fingertip.id>/solution` / `soft_csp/solution`, read from their `initial_guess` topics, and subscribed by `soft_its_viz`.
+  Access example (C++): `msg.header`, `msg.csp.c.x`, `msg.csp.fn`, `msg.d`.
 - **its_msgs/TacTipDensity**: A message that contains the Tactip density estimation in a frame.
 - **its_msgs/TacTipMarkers**: A message that contains all the markers centroid positions in a frame.
 
@@ -54,7 +67,8 @@
     - **verbose**: print output on each step
     - **force_threshold**: Force threshold to enable solver [N]
     - **method**: Parameters of ITS solver
-      - **name**: solver method name(Default Levenberg-Marquardt)
+      - **name**: solver method name (Default Levenberg-Marquardt): `"Levenberg-Marquardt"` | `"Gauss-Newton"` | `"Closed-Form"` | `"Wrench-Method"` | `"Custom"`.
+        `"Wrench-Method"` (Bicchi et al.) intersects the wrench axis of the measured (f, m) with the fingertip surface; it is exact for point contacts and needs no initial guess.
       - **params**:
         - **count_max**: num of max iteration until forced stop
         - **stop_threshold**: Xi_square threshold for convergence condition

@@ -46,7 +46,7 @@ enum class ContactSensingProblemMethod : unsigned short int {
     Levenberg_Marquardt = 1,
     Gauss_Newton        = 2,
     Closed_Form         = 3,
-    Wrench_Method       = 4,   // to do
+    Wrench_Method       = 4,
     Custom              = 5
 };
 // ============================================================================
@@ -185,7 +185,7 @@ protected:
             Eigen::Vector3d f, Eigen::Vector3d t,
             double forceThreshold = 0.0);
 
-    // Solve with Wrench-Method (TO DO)
+    // Solve with Wrench-Method
     virtual int solveContactSensingProblemWM(
             Eigen::Vector3d f, Eigen::Vector3d t,
             double forceThreshold = 0.0);

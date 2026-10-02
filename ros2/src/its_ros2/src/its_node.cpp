@@ -5,7 +5,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "its_msgs/msg/soft_contact_sensing_problem_solution.hpp"
+#include "its_msgs/msg/soft_contact_sensing_problem_solution_stamped.hpp"
 #include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -111,6 +111,8 @@ public:
             solver_ = ContactSensingProblemMethod::Gauss_Newton;
         } else if (solver_name_ == "Closed-Form") {
             solver_ = ContactSensingProblemMethod::Closed_Form;
+        } else if (solver_name_ == "Wrench-Method") {
+            solver_ = ContactSensingProblemMethod::Wrench_Method;
         } else if (solver_name_ == "Custom") {
             solver_ = ContactSensingProblemMethod::Custom;
         } else {
@@ -131,11 +133,11 @@ public:
             sensor_id + "/netft_data", 100,
             [this](const geometry_msgs::msg::WrenchStamped::SharedPtr msg) { ftCallback(msg); });                 // raw measurment
 
-        ig_sub_ = create_subscription<its_msgs::msg::SoftContactSensingProblemSolution>(
+        ig_sub_ = create_subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>(
             "its_" + finger_id + "/initial_guess", 100,
-            [this](const its_msgs::msg::SoftContactSensingProblemSolution::SharedPtr msg) { igCallback(msg); });  // ITS initial guess
+            [this](const its_msgs::msg::SoftContactSensingProblemSolutionStamped::SharedPtr msg) { igCallback(msg); });  // ITS initial guess
 
-        solution_pub_ = create_publisher<its_msgs::msg::SoftContactSensingProblemSolution>(
+        solution_pub_ = create_publisher<its_msgs::msg::SoftContactSensingProblemSolutionStamped>(
             "soft_csp_" + finger_id + "/solution", 100);                                                                            // ITS Solution guess
 
         if (wrench_msgs_compatibility){
@@ -162,8 +164,8 @@ private:
     }
 
     // ---- Initial-guess callback ---------------------------------------------
-    void igCallback(const its_msgs::msg::SoftContactSensingProblemSolution::SharedPtr msg) {
-        X0_.c = {msg->poc.x, msg->poc.y, msg->poc.z};
+    void igCallback(const its_msgs::msg::SoftContactSensingProblemSolutionStamped::SharedPtr msg) {
+        X0_.c = {msg->csp.c.x, msg->csp.c.y, msg->csp.c.z};
         const std::string& finger_id = ITS_.fingertip.id;
         const double Dd = msg->d;
         ITS_.setFingertipSurface(finger_id,
@@ -171,7 +173,7 @@ private:
                                  psa_at_rest_[1] - Dd,
                                  psa_at_rest_[2] - Dd);
         Eigen::Vector3d n = ITS_.fingertip.model.getNormal(X0_.c(0), X0_.c(1), X0_.c(2));
-        X0_.K = msg->t / n.norm();
+        X0_.K = msg->csp.t / n.norm();
     }
 
     // ---- Timer --------------------------------------------------------------
@@ -181,7 +183,7 @@ private:
         const auto t0 = now();
 
         // Compute initial guess with Closed Form on mesh approximating ellipsoid --------------------------------------------
-        if (solver_ != ContactSensingProblemMethod::Closed_Form && solver_ != ContactSensingProblemMethod::Custom ) {
+        if (solver_ != ContactSensingProblemMethod::Closed_Form && solver_ != ContactSensingProblemMethod::Wrench_Method && solver_ != ContactSensingProblemMethod::Custom ) {
             ITS_.solveContactSensingProblemInitialGuess(f_, m_, force_th_);
             X0_.c = ITS_.X.c;
             X0_.K = ITS_.X.K;
@@ -196,7 +198,7 @@ private:
         new_measure_ = false;
 
         const double elapsed_ms = (t1 - t0).nanoseconds() / 1e6;
-        its_msgs::msg::SoftContactSensingProblemSolution sol_msg;
+        its_msgs::msg::SoftContactSensingProblemSolutionStamped sol_msg;
         sol_msg.header.frame_id = ITS_.fingertip.id;
         sol_msg.header.stamp    = t1;
 
@@ -224,13 +226,13 @@ private:
                     RCLCPP_WARN(get_logger(), "Did not converge in %i steps (%.3f ms)", count_max_, elapsed_ms);
                 RCLCPP_INFO(get_logger(), "%s", std::string(40, '-').c_str());
             }
-            sol_msg.poc.x = sol.PoC(0); sol_msg.poc.y = sol.PoC(1); sol_msg.poc.z = sol.PoC(2);
-            sol_msg.n.x   = n(0);       sol_msg.n.y   = n(1);       sol_msg.n.z   = n(2);
-            sol_msg.fn    = sol.fn;
-            sol_msg.ft.x  = sol.ft(0);  sol_msg.ft.y  = sol.ft(1);  sol_msg.ft.z  = sol.ft(2);
-            sol_msg.t     = sol.t;
+            sol_msg.csp.c.x = sol.PoC(0); sol_msg.csp.c.y = sol.PoC(1); sol_msg.csp.c.z = sol.PoC(2);
+            sol_msg.csp.n.x = n(0);       sol_msg.csp.n.y = n(1);       sol_msg.csp.n.z = n(2);
+            sol_msg.csp.fn  = sol.fn;
+            sol_msg.csp.ft.x = sol.ft(0); sol_msg.csp.ft.y = sol.ft(1); sol_msg.csp.ft.z = sol.ft(2);
+            sol_msg.csp.t   = sol.t;
             sol_msg.d     = psa_at_rest_[0] - ITS_.fingertip.model.principalAxisCoeff[0];
-            sol_msg.convergence_time = elapsed_ms;
+            sol_msg.csp.convergence_time = elapsed_ms;
 
             // broadcast TF from fingertip to contact frame
             std::string poc_frame_id = ITS_.fingertip.id + "_PoC";
@@ -304,8 +306,8 @@ private:
     double       rate_hz_   {0.5};
 
     rclcpp::Subscription<geometry_msgs::msg::WrenchStamped>::SharedPtr                         ft_sub_;
-    rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolution>::SharedPtr          ig_sub_;
-    rclcpp::Publisher<its_msgs::msg::SoftContactSensingProblemSolution>::SharedPtr             solution_pub_;
+    rclcpp::Subscription<its_msgs::msg::SoftContactSensingProblemSolutionStamped>::SharedPtr          ig_sub_;
+    rclcpp::Publisher<its_msgs::msg::SoftContactSensingProblemSolutionStamped>::SharedPtr             solution_pub_;
     rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr                            wrench_pub_;
 
     rclcpp::TimerBase::SharedPtr                                                               timer_;

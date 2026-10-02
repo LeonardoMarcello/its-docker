@@ -18,3 +18,26 @@ services:
     tty: true
     stdin_open: true
     # optional: maps current user's UID inside container, but final UID is set at build-time
+
+  # Minimal production image: `docker compose --profile prod up its_prod`
+  its:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: its:latest
+    container_name: its
+    network_mode: host
+    #ipc: host
+    tty: true
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
+      #- RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+    - ./ros2/src/its_ros2/config:/opt/its_ws/install/share/its_ros2/config:rw
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    privileged: true
+    command: ros2 launch its_ros2 its_bringup.launch.py
